@@ -1,27 +1,32 @@
 //GL means Good Luck!
 //Basic object class
-#define GRAVITY 9
+#define GRAVITY 1
 
 
 struct Vector2
 {
 	float x,y;
 };
+
 class GLuckObject
 {
 public:
 	GLuckObject(int iniPosX,int iniPosY);
 	~GLuckObject();
-	bool setGravity();
+	bool setGravity(bool newGravity);
 	int posX();
 	int posY();
 	bool fall();
-private:
+protected:
 	Vector2 speed;
 	int x,y;
 	bool onGravity;
 };
-
+bool GLuckObject::setGravity(bool newGravity){
+	bool tG = onGravity;
+	onGravity = newGravity;
+	return tG;
+}
 GLuckObject::GLuckObject(int iniPosX = 0,int iniPosY = 0,bool iniGravity = false){
 	speed.x = 0;
 	speed.y = 0;
@@ -30,9 +35,10 @@ GLuckObject::GLuckObject(int iniPosX = 0,int iniPosY = 0,bool iniGravity = false
 	onGravity = iniGravity;
 }
 
-GLuckObject::fall(){
+bool GLuckObject::fall(){
 	if(onGravity){
 		y -= speed.y;
 		speed.y += GRAVITY;
 	}
+	return onGravity;
 }
