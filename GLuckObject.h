@@ -8,19 +8,39 @@
 #include "GL\glut.h"
 #include <math.h>
 #include <vector>
+using namespace std;
 
-
-
-
-struct GLuckPOINT
+class Vector2
 {
+public:
+	float x, y;
+	Vector2(float iniX, float iniY);
+};
+
+Vector2::Vector2(float iniX = 0, float iniY = 0) {
+	x = iniX;
+	y = iniY;
+}
+
+
+class GLuckPOINT
+{
+public:
+	GLuckPOINT() {};
+	GLuckPOINT(GLfloat iniX, GLfloat iniY);
+	void set(GLfloat newX, GLfloat newY);
 	GLfloat x, y;
 };
 
-struct Vector2
-{
-	float x,y;
-};
+GLuckPOINT::GLuckPOINT(GLfloat iniX, GLfloat iniY) {
+	x = iniX;
+	y = iniY;
+}
+void GLuckPOINT::set(GLfloat newX, GLfloat newY) {
+	x = newX;
+	y = newY;
+}
+
 
 class GLuckColor
 {
@@ -41,6 +61,7 @@ void GLuckColor::set(int r, int g, int b) {
 	this->b = b;
 }
 
+
 //==================================================
 //GluckObject
 //==================================================
@@ -57,13 +78,13 @@ public:
 
 	void setColor(int r, int g, int b);
 	void setColor(GLuckColor color);
-	virtual bool transform();
+
+	virtual bool move();
+	virtual void transform(GLfloat posX, GLfloat posY);
 	virtual void display() {};
-	
-	GLuckPOINT hitPoint;
+
+
 protected:
-	//static ObjList list;
-	//static int NumOfObj;
 	float elastic;
 	Vector2 speed;
 	GLuckColor RGB;
@@ -77,8 +98,6 @@ GLuckObject::GLuckObject(GLfloat iniPosX = 0, GLfloat iniPosY = 0, bool iniGravi
 	speed.y = 0;
 	x = iniPosX;
 	y = iniPosY;
-	hitPoint.x = x;
-	hitPoint.y = y;
 	onGravity = iniGravity;
 	//ObjID = ++NumOfObj;
 	setColor(255,255,255);
@@ -115,144 +134,112 @@ inline int GLuckObject::ID()
 	return ObjID;
 }
 
-bool GLuckObject::transform(){
-	
-		y -= speed.y;
-		if (onGravity) {
-			if(y > 0)
-				speed.y += GRAVITY;
-		if (y < 0) {
-			y = 0;
-			speed.y = -speed.y * elastic;
-			if (speed.y > -1)speed.y = 0;
-		}
-	}
-	return onGravity;
-}
-
 inline void GLuckObject::setColor(int r, int g, int b)
 {
 	RGB.r = r;
 	RGB.g = g;
 	RGB.b = b;
 }
+
 inline void GLuckObject::setColor(GLuckColor color)
 {
 	RGB = color;
 }
 
-//vector!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-////ObjectList
-//class ObjList
-//{
-//public:
-//	ObjList();
-//	ObjList(GLuckObject * iniObj);
-//	void append(GLuckObject* appendObj);
-//	GLuckObject* obj;
-//	ObjList* next;
-//};
-//
-//inline ObjList::ObjList()
-//{
-//	obj = nullptr;
-//	next = nullptr;
-//}
-//
-//ObjList::ObjList(GLuckObject * iniObj) {
-//	obj = iniObj;
-//	next = nullptr;
-//}
-//
-//inline void ObjList::append(GLuckObject * appendObj)
-//{
-//	ObjList* p = this;
-//	for (; p->next; p = p->next);
-//
-//	p->next = new ObjList(appendObj);
-//}
-//
+bool GLuckObject::move(){
+	x += speed.x;
+	y -= speed.y;
+	if (onGravity && (int)y > 0)speed.y += GRAVITY;
+
+	if (y < 0) {
+		y = 0;
+		speed.y = (-speed.y + 1) * elastic;
+		if (speed.y > -1)speed.y = 0;
+	}
+	return onGravity;
+}
+
+inline void GLuckObject::transform(GLfloat newX,GLfloat newY)
+{
+	x = newX;
+	y = newY;
+}
+
 
 //==================================================
-//Square  GluckObject
+//GLuckPolygon  GluckObject
 //==================================================
-class Square :public GLuckObject {
+class GLuckPolygon :public GLuckObject {
 public:
-	Square(int iniEdge, GLfloat iniRange, int iniPosX, int iniPosY, bool iniGravity, bool clockWise);
-	virtual void display();
-	bool transform();
+	GLuckPolygon(int iniEdge, GLfloat iniRange, int iniPosX, int iniPosY, bool iniGravity, bool clockWise);
+
+	bool move();
 	GLfloat scale(GLfloat changeValue, GLfloat maxScaleSzie);
 	virtual void rotate(GLfloat speed);
+	virtual void display();
+
 protected:
 	void refresh();
 	bool clockWise;
 	GLfloat rotationAngle;
-	vector<GLuckPOINT> pivot;
+	vector<GLuckPOINT> vPivot;
 	int edge;
 	GLfloat range;
 };
 
-Square::Square(int iniEdge,GLfloat iniRange, int iniPosX = 0, int iniPosY = 0, bool iniGravity = false, bool clockWise = true)
+GLuckPolygon::GLuckPolygon(int iniEdge,GLfloat iniRange, int iniPosX = 0, int iniPosY = 0, bool iniGravity = false, bool clockWise = true)
 :GLuckObject(iniPosX,iniPosY,iniGravity){
 	edge = iniEdge;
 	range = iniRange;
-	refresh();
 	elastic = 0.4;
 	rotationAngle = 0;
 	this->clockWise = clockWise;
+	float dAng = 2 * PI / edge;
 
+	for (int i = 0; i < edge; i++)
+	{
+		GLuckPOINT p(x + range*sin(dAng*i + rotationAngle), y + range*cos(dAng*i + rotationAngle));
+		vPivot.push_back(p);
+	}
 }
 
-void Square::refresh() {
-	pivot[0].x = x + cos(PI / 4.0)*width*cos(3.0*PI / 4.0 + rotationAngle);
-	pivot[0].y = y + cos(PI / 4.0)*width*sin(3.0*PI / 4.0 + rotationAngle);
-
-	pivot[1].x = x + cos(PI / 4.0)*width*cos(PI / 4.0 + rotationAngle);
-	pivot[1].y = y + cos(PI / 4.0)*width*sin(PI / 4.0 + rotationAngle);
-
-	pivot[2].x = x + cos(PI / 4.0)*width*cos(5.0*PI / 4.0 + rotationAngle);
-	pivot[2].y = y + cos(PI / 4.0)*width*sin(5.0*PI / 4.0 + rotationAngle);
-
-	pivot[3].x = x + cos(PI / 4.0)*width*cos(-PI / 4.0 + rotationAngle);
-	pivot[3].y = y + cos(PI / 4.0)*width*sin(-PI / 4.0 + rotationAngle);
-
-	hitPoint = pivot[3];
-
+void GLuckPolygon::refresh() {
+	float dAng = 2 * PI / edge;
+	GLfloat minY = vPivot.at(0).y;
+	int minYPivot = 0;
+	for (int i = 0; i < edge; i++)
+		vPivot.at(i).set(x + range*sin(dAng*i + rotationAngle), y + range*cos(dAng*i + rotationAngle));
 }
 
-inline void Square::display()
+inline bool GLuckPolygon::move() {
+	x += speed.x;
+	y -= speed.y;
+	if (onGravity && (int)y > range)speed.y += GRAVITY;
+	//bounce
+	if (y < range) {
+		y = range;
+		speed.y = (-speed.y + 1) * elastic;
+		if (speed.y > -1)speed.y = 0;
+	}
+	return onGravity;
+}
+
+inline void GLuckPolygon::display()
 {
-	transform();
+	move();
 	refresh();
 	glColor3ub(RGB.r,RGB.g,RGB.b);
-	//glRectf(-0.5f,-0.5f,0.5f,0.5f);
+	
 	glBegin(GL_POLYGON);
-	glVertex2f(pivot[0].x, pivot[0].y);
-	glVertex2f(pivot[1].x, pivot[1].y);
-	glVertex2f(pivot[3].x, pivot[3].y);
-	glVertex2f(pivot[2].x, pivot[2].y);
+	
+	for(int i = 0;i<vPivot.size();i++)
+		glVertex2f(vPivot.at(i).x, vPivot.at(i).y);
+	
 	glEnd();
 	
 }
 
-inline bool Square::transform() {
-	y -= speed.y;
-
-
-	if (onGravity && (int)hitPoint.y > 0)speed.y += GRAVITY;
-
-	//bounce
-	if (hitPoint.y < 0) {
-		y = (double)range /2.0f;
-		refresh();
-		speed.y = (-speed.y+1) * elastic;
-		if (speed.y > -4)speed.y = 0;
-	}
-
-	return onGravity;
-}
-
-inline GLfloat Square::scale(GLfloat changeValue,GLfloat maxSzie)
+inline GLfloat GLuckPolygon::scale(GLfloat changeValue,GLfloat maxSzie)
 {
 	range += changeValue;
 	if (range <= 0) range = 0;
@@ -262,17 +249,17 @@ inline GLfloat Square::scale(GLfloat changeValue,GLfloat maxSzie)
 	return range;
 }
 
-inline void Square::rotate(GLfloat speed)
+inline void GLuckPolygon::rotate(GLfloat speed)
 {
 	if (!clockWise) {
 		rotationAngle += speed;
 		rotationAngle = rotationAngle > PI*2 ? 0 : rotationAngle;
 	}
-	else
-	{
+	else{
 		rotationAngle -= speed;
 		rotationAngle = rotationAngle < -PI*2 ? 0 : rotationAngle;
 	}
 }
 
-std::vector<Square> vSqares;
+
+std::vector<GLuckPolygon> vPolygons;
